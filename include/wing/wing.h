@@ -43,7 +43,7 @@ namespace Cyberwing
 			float q1, q2, q3, q4;
 			float depth, temperature;
 			float leak;
-			float d1, d2, d3, d4, d5;
+			//float d1, d2, d3, d4, d5;
 		};
 
 	public:

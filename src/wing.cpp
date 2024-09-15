@@ -82,8 +82,8 @@ namespace Cyberwing
             delay(1000);
         } else {
             depth_.setFluidDensity(FLUID_DENSITY);
-            // depth_.setModel(MS5837::MS5837_30BA);
-            depth_.setModel(MS5837::MS5837_02BA);
+            depth_.setModel(MS5837::MS5837_30BA);
+            //depth_.setModel(MS5837::MS5837_02BA);
             Serial.println("Depth Sensor Detected!");
             Serial.print(F("Fluid density set to: "));
             Serial.println(FLUID_DENSITY);
@@ -152,13 +152,13 @@ namespace Cyberwing
                 int del2_ms = map(0, -1.57, 1.57, 1000, 2000);
                 int del3_ms = map(0, -1.57, 1.57, 1000, 2000);
                 int del4_ms = map(0, -1.57, 1.57, 1000, 2000);
-                int del5_ms = map(0, -1.57, 1.57, 1000, 2000);
+                //int del5_ms = map(0, -1.57, 1.57, 1000, 2000);
 
                 servo1_.writeMicroseconds(del1_ms);
                 servo2_.writeMicroseconds(del2_ms);
                 servo3_.writeMicroseconds(del3_ms);
                 servo4_.writeMicroseconds(del4_ms);
-                servo5_.writeMicroseconds(del5_ms);
+                //servo5_.writeMicroseconds(del5_ms);
 
 				break;
 			}
@@ -188,18 +188,18 @@ namespace Cyberwing
     void Wing::forwardInputs(void) {
 
         // TODO> THESE GUYS MUST BE TUNNED!
-        int del1_ms = map(input_[0], -1.57, 1.57, 1000, 2000);
+        int del1_ms = map(input_[1], -1.57, 1.57, 1000, 2000);
         int del2_ms = map(input_[1], -1.57, 1.57, 1000, 2000);
-        int del3_ms = map(input_[2], -1.57, 1.57, 1000, 2000);
-        int del4_ms = map(input_[3], -1.57, 1.57, 1000, 2000);
-        int del5_ms = map(input_[4], -1.57, 1.57, 1000, 2000);
+        int del3_ms = map(-input_[1], -1.57, 1.57, 1000, 2000);
+        int del4_ms = map(-input_[1], -1.57, 1.57, 1000, 2000);
+        //int del5_ms = map(input_[4], -1.57, 1.57, 1000, 2000);
         
         // Write to the servos
         servo1_.writeMicroseconds(del1_ms);
         servo2_.writeMicroseconds(del2_ms);
         servo3_.writeMicroseconds(del3_ms);
         servo4_.writeMicroseconds(del4_ms);
-        servo5_.writeMicroseconds(del5_ms);
+        //servo5_.writeMicroseconds(del5_ms);
 
     }
 
@@ -236,41 +236,6 @@ namespace Cyberwing
         float quaternion_z = (float)quat_z / 32767;
         float quaternion_w = (float)quat_w / 32767;
 
-            // Debug prints for raw IMU data
-    Serial.print("raw_acc_x: "); Serial.println(acc_c_x);
-    Serial.print("raw_acc_y: "); Serial.println(acc_c_y);
-    Serial.print("raw_acc_z: "); Serial.println(acc_c_z);
-    Serial.print("raw_gyro_x: "); Serial.println(gyro_c_x);
-    Serial.print("raw_gyro_y: "); Serial.println(gyro_c_y);
-    Serial.print("raw_gyro_z: "); Serial.println(gyro_c_z);
-
-        // Debug prints for raw quaternion data
-    Serial.print("raw_quat_x: "); Serial.println(quat_x);
-    Serial.print("raw_quat_y: "); Serial.println(quat_y);
-    Serial.print("raw_quat_z: "); Serial.println(quat_z);
-    Serial.print("raw_quat_w: "); Serial.println(quat_w);
-
-        // // update servo feedback readings,
-        // int d1 = analogRead(SERVO1_ANALOG_PIN);
-        // int d2 = analogRead(SERVO2_ANALOG_PIN);
-        // int d3 = analogRead(SERVO3_ANALOG_PIN);
-        // int d4 = analogRead(SERVO4_ANALOG_PIN);
-        // int d5 = analogRead(SERVO5_ANALOG_PIN);
-
-        // Serial.print("d1 = ");
-        // Serial.println(d1);
-
-        // // then map the analog input to a radian value.
-        // // Todo: MAPPING MUST BE DONE. each servo has different potentiometer.
-        // servoFeedback_[0] = my_map(d1, 236, 402, -1.57, 1.57);
-        // servoFeedback_[1] = my_map(d2, 236, 402, -1.57, 1.57);
-        // servoFeedback_[2] = my_map(d3, 236, 402, -1.57, 1.57);
-        // servoFeedback_[3] = my_map(d4, 236, 402, -1.57, 1.57);
-        // servoFeedback_[4] = my_map(d5, 236, 402, -1.57, 1.57);
-
-        // Serial.print("f1 = ");
-        // Serial.println(servoFeedback_[0]);
-
         // New State                
         float stateNew[18];
         stateNew[0] = comp_acc_x;
@@ -286,11 +251,41 @@ namespace Cyberwing
         stateNew[10] = depth_.depth();;
         stateNew[11] = depth_.temperature();
         stateNew[12] = leak_;
-        // stateNew[13] = servoFeedback_[0];
-        // stateNew[14] = servoFeedback_[1];
-        // stateNew[15] = servoFeedback_[2];
-        // stateNew[16] = servoFeedback_[3];
-        // stateNew[17] = servoFeedback_[4];
+
+        // Debug prints of dpeth sensor
+        float rawDepth = depth_.depth();
+        float rawTemperature = depth_.temperature();
+
+        // Print raw depth sensor data
+        Serial.print("Raw Depth: ");
+        Serial.println(rawDepth);
+
+        Serial.print("Raw Temperature: ");
+        Serial.println(rawTemperature);
+
+        // Existing code to print processed depth sensor data
+        Serial.print("Depth: ");
+        Serial.print(stateNew[10]);
+        Serial.println(" meters");
+
+        Serial.print("Temperature: ");
+        Serial.print(stateNew[11]);
+        Serial.println(" °C");
+
+                // Debug prints for raw IMU data
+        // Serial.print("raw_acc_x: "); Serial.println(acc_c_x);
+        // Serial.print("raw_acc_y: "); Serial.println(acc_c_y);
+        // Serial.print("raw_acc_z: "); Serial.println(acc_c_z);
+        // Serial.print("raw_gyro_x: "); Serial.println(gyro_c_x);
+        // Serial.print("raw_gyro_y: "); Serial.println(gyro_c_y);
+        // Serial.print("raw_gyro_z: "); Serial.println(gyro_c_z);
+
+        //     // Debug prints for raw quaternion data
+        // Serial.print("raw_quat_x: "); Serial.println(quat_x);
+        // Serial.print("raw_quat_y: "); Serial.println(quat_y);
+        // Serial.print("raw_quat_z: "); Serial.println(quat_z);
+        // Serial.print("raw_quat_w: "); Serial.println(quat_w);
+
 
         memcpy(state_,stateNew,sizeof(state_));	
 	}
