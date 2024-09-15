@@ -208,7 +208,7 @@ namespace Cyberwing
 	{
         // read state
         uint8_t buf_comp_data[18];
-        read(I2C_SLAVE_REG_C_ACC_X_LOW, buf_comp_data, 18);
+        readSensor(I2C_SLAVE_REG_C_ACC_X_LOW, buf_comp_data, 18);
         int16_t acc_c_x = (buf_comp_data[1]<<8) | buf_comp_data[0];
         int16_t acc_c_y = (buf_comp_data[3]<<8) | buf_comp_data[2];
         int16_t acc_c_z = (buf_comp_data[5]<<8) | buf_comp_data[4];
@@ -225,7 +225,7 @@ namespace Cyberwing
 
         // read quaternion
         uint8_t buf_quat[8];
-        read(I2C_SLAVE_REG_QUATERNIAN_X_LOW, buf_quat, 8);
+        readSensor(I2C_SLAVE_REG_QUATERNIAN_X_LOW, buf_quat, 8);
         int16_t quat_x = (buf_quat[1]<<8) | buf_quat[0];
         int16_t quat_y = (buf_quat[3]<<8) | buf_quat[2];
         int16_t quat_z = (buf_quat[5]<<8) | buf_quat[4];
@@ -236,27 +236,40 @@ namespace Cyberwing
         float quaternion_z = (float)quat_z / 32767;
         float quaternion_w = (float)quat_w / 32767;
 
+            // Debug prints for raw IMU data
+    Serial.print("raw_acc_x: "); Serial.println(acc_c_x);
+    Serial.print("raw_acc_y: "); Serial.println(acc_c_y);
+    Serial.print("raw_acc_z: "); Serial.println(acc_c_z);
+    Serial.print("raw_gyro_x: "); Serial.println(gyro_c_x);
+    Serial.print("raw_gyro_y: "); Serial.println(gyro_c_y);
+    Serial.print("raw_gyro_z: "); Serial.println(gyro_c_z);
 
-        // update servo feedback readings,
-        int d1 = analogRead(SERVO1_ANALOG_PIN);
-        int d2 = analogRead(SERVO2_ANALOG_PIN);
-        int d3 = analogRead(SERVO3_ANALOG_PIN);
-        int d4 = analogRead(SERVO4_ANALOG_PIN);
-        int d5 = analogRead(SERVO5_ANALOG_PIN);
+        // Debug prints for raw quaternion data
+    Serial.print("raw_quat_x: "); Serial.println(quat_x);
+    Serial.print("raw_quat_y: "); Serial.println(quat_y);
+    Serial.print("raw_quat_z: "); Serial.println(quat_z);
+    Serial.print("raw_quat_w: "); Serial.println(quat_w);
 
-        Serial.print("d1 = ");
-        Serial.println(d1);
+        // // update servo feedback readings,
+        // int d1 = analogRead(SERVO1_ANALOG_PIN);
+        // int d2 = analogRead(SERVO2_ANALOG_PIN);
+        // int d3 = analogRead(SERVO3_ANALOG_PIN);
+        // int d4 = analogRead(SERVO4_ANALOG_PIN);
+        // int d5 = analogRead(SERVO5_ANALOG_PIN);
 
-        // then map the analog input to a radian value.
-        // Todo: MAPPING MUST BE DONE. each servo has different potentiometer.
-        servoFeedback_[0] = my_map(d1, 236, 402, -1.57, 1.57);
-        servoFeedback_[1] = my_map(d2, 236, 402, -1.57, 1.57);
-        servoFeedback_[2] = my_map(d3, 236, 402, -1.57, 1.57);
-        servoFeedback_[3] = my_map(d4, 236, 402, -1.57, 1.57);
-        servoFeedback_[4] = my_map(d5, 236, 402, -1.57, 1.57);
+        // Serial.print("d1 = ");
+        // Serial.println(d1);
 
-        Serial.print("f1 = ");
-        Serial.println(servoFeedback_[0]);
+        // // then map the analog input to a radian value.
+        // // Todo: MAPPING MUST BE DONE. each servo has different potentiometer.
+        // servoFeedback_[0] = my_map(d1, 236, 402, -1.57, 1.57);
+        // servoFeedback_[1] = my_map(d2, 236, 402, -1.57, 1.57);
+        // servoFeedback_[2] = my_map(d3, 236, 402, -1.57, 1.57);
+        // servoFeedback_[3] = my_map(d4, 236, 402, -1.57, 1.57);
+        // servoFeedback_[4] = my_map(d5, 236, 402, -1.57, 1.57);
+
+        // Serial.print("f1 = ");
+        // Serial.println(servoFeedback_[0]);
 
         // New State                
         float stateNew[18];
@@ -273,11 +286,11 @@ namespace Cyberwing
         stateNew[10] = depth_.depth();;
         stateNew[11] = depth_.temperature();
         stateNew[12] = leak_;
-        stateNew[13] = servoFeedback_[0];
-        stateNew[14] = servoFeedback_[1];
-        stateNew[15] = servoFeedback_[2];
-        stateNew[16] = servoFeedback_[3];
-        stateNew[17] = servoFeedback_[4];
+        // stateNew[13] = servoFeedback_[0];
+        // stateNew[14] = servoFeedback_[1];
+        // stateNew[15] = servoFeedback_[2];
+        // stateNew[16] = servoFeedback_[3];
+        // stateNew[17] = servoFeedback_[4];
 
         memcpy(state_,stateNew,sizeof(state_));	
 	}
@@ -303,11 +316,11 @@ namespace Cyberwing
         outPacket_.depth = state_[10];
         outPacket_.temperature = state_[11];
         outPacket_.leak = state_[12];
-        outPacket_.d1 = state_[13];
-        outPacket_.d2 = state_[14];
-        outPacket_.d3 = state_[15];
-        outPacket_.d4 = state_[16];
-        outPacket_.d5 = state_[17];
+        // outPacket_.d1 = state_[13];
+        // outPacket_.d2 = state_[14];
+        // outPacket_.d3 = state_[15];
+        // outPacket_.d4 = state_[16];
+        // outPacket_.d5 = state_[17];
 
         memcpy(packetBuffer_, &outPacket_, sizeof(packetBuffer_));
         udp2_.write(packetBuffer_, sizeof(packetBuffer_));
