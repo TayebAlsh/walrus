@@ -17,3 +17,10 @@ The objectives of the source code is to support bi-directional communication for
 actuated tethered vehicle with onboard sensing and dynamic capabilities.
 
 ![Picture1](https://user-images.githubusercontent.com/83678386/228845231-ecb7e2a6-dcdd-4726-a611-a5c74db20bbe.png)
+To install the required `eigen` library, run the following command in your terminal:
+
+
+
+
+```sh
+git clone https://github.com/bolderflight/eigen.git lib/eigen
