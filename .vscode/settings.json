@@ -1,6 +1,7 @@
 {
   "files.associations": {
-    "streambuf": "cpp"
+    "streambuf": "cpp",
+    "dense": "cpp"
   },
   "cmake.configureOnOpen": false
 }

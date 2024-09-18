@@ -81,6 +81,7 @@ namespace Cyberwing
 		void parsePacket(AsyncUDPPacket packet);
 		void publishState(void);
 		void forwardInputs(void);
+		void forwardInputs2(void);
 		void updateState(void);
 
 		float my_map(int x, float in_min, float in_max, float out_min, float out_max);

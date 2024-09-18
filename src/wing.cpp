@@ -1,6 +1,12 @@
 #include "wing/wing.h"
 #include "myAHRS_plus.h"
 
+#undef B1
+#include <Eigen/Dense>
+// Redefine the B1 macro
+#define B1 1
+
+
 
 namespace Cyberwing
 {
@@ -136,7 +142,8 @@ namespace Cyberwing
 
                 // receive input packet and update 
                 // receive(); - done through asynchonous function on init()
-                forwardInputs();
+                // forwardInputs();
+                forwardInputs2();
 
                 // - Send vehicle state to host computer
                 updateState();
@@ -188,21 +195,50 @@ namespace Cyberwing
     void Wing::forwardInputs(void) {
 
         // TODO> THESE GUYS MUST BE TUNNED!
-        int del1_ms = map(input_[1], -1.57, 1.57, 1000, 2000);
-        int del2_ms = map(input_[1], -1.57, 1.57, 1000, 2000);
-        int del3_ms = map(-input_[1], -1.57, 1.57, 1000, 2000);
-        int del4_ms = map(-input_[1], -1.57, 1.57, 1000, 2000);
-        //int del5_ms = map(input_[4], -1.57, 1.57, 1000, 2000);
+        int del1_ms = map(-input_[1], -1.57, 1.57, 1000, 2000);
+        int del2_ms = map(-input_[1], -1.57, 1.57, 1000, 2000);
+        int del3_ms = map(input_[1], -1.57, 1.57, 1000, 2000);
+        int del4_ms = map(input_[1], -1.57, 1.57, 1000, 2000);
+
         
         // Write to the servos
         servo1_.writeMicroseconds(del1_ms);
         servo2_.writeMicroseconds(del2_ms);
         servo3_.writeMicroseconds(del3_ms);
         servo4_.writeMicroseconds(del4_ms);
-        //servo5_.writeMicroseconds(del5_ms);
-
+        Serial.print(F("Servo 1: "));
+        Serial.println(del1_ms);
     }
 
+    void Wing::forwardInputs2(void) {
+        // Define joystick input as a 2x1 vector (yaw, pitch)
+        Eigen::Vector2f joystickInput;
+        joystickInput << input_[0], input_[1];
+
+        // Define the 4x2 transformation matrix for yaw and pitch mapping
+        Eigen::Matrix<float, 4, 2> A;
+        A <<  1,  1,   // Servo 1
+             -1,  1,   // Servo 2
+              1, -1,   // Servo 3
+             -1, -1;   // Servo 4
+
+        // Perform matrix multiplication to get servo commands (4x1 vector)
+        Eigen::Vector4f servoCommands = A * joystickInput;
+
+        // Update the servos with calculated commands (you might need to scale or map these to PWM values)
+        servo1_.writeMicroseconds(servoCommands[0]);  // Send command to Servo 1
+        servo2_.writeMicroseconds(servoCommands[1]);  // Send command to Servo 2
+        servo3_.writeMicroseconds(servoCommands[2]);  // Send command to Servo 3
+        servo4_.writeMicroseconds(servoCommands[3]);  // Send command to Servo 4
+
+        // Debugging output
+        Serial.println("Servo Commands: ");
+        Serial.println(servoCommands[0]);
+        Serial.println(servoCommands[1]);
+        Serial.println(servoCommands[2]);
+        Serial.println(servoCommands[3]);
+
+    }
 
     void Wing::updateState(void)
 	{
@@ -252,25 +288,25 @@ namespace Cyberwing
         stateNew[11] = depth_.temperature();
         stateNew[12] = leak_;
 
-        // Debug prints of dpeth sensor
-        float rawDepth = depth_.depth();
-        float rawTemperature = depth_.temperature();
+        // // Debug prints of dpeth sensor
+        // float rawDepth = depth_.depth();
+        // float rawTemperature = depth_.temperature();
 
-        // Print raw depth sensor data
-        Serial.print("Raw Depth: ");
-        Serial.println(rawDepth);
+        // // Print raw depth sensor data
+        // Serial.print("Raw Depth: ");
+        // Serial.println(rawDepth);
 
-        Serial.print("Raw Temperature: ");
-        Serial.println(rawTemperature);
+        // Serial.print("Raw Temperature: ");
+        // Serial.println(rawTemperature);
 
-        // Existing code to print processed depth sensor data
-        Serial.print("Depth: ");
-        Serial.print(stateNew[10]);
-        Serial.println(" meters");
+        // // Existing code to print processed depth sensor data
+        // Serial.print("Depth: ");
+        // Serial.print(stateNew[10]);
+        // Serial.println(" meters");
 
-        Serial.print("Temperature: ");
-        Serial.print(stateNew[11]);
-        Serial.println(" °C");
+        // Serial.print("Temperature: ");
+        // Serial.print(stateNew[11]);
+        // Serial.println(" °C");
 
                 // Debug prints for raw IMU data
         // Serial.print("raw_acc_x: "); Serial.println(acc_c_x);
