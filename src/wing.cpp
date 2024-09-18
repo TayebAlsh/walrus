@@ -1,7 +1,9 @@
 #include "wing/wing.h"
 #include "myAHRS_plus.h"
 
-#include "eigen.h"
+
+#include "eigen.h"      // Calls main Eigen matrix class library
+#include <Eigen/LU>     // Calls inverse, determinant, LU decomp., etc.
 
 namespace Cyberwing
 {
@@ -58,6 +60,10 @@ namespace Cyberwing
             // Connect to IP and Port for sending packets
             udp2_.connect(IPAddress(IP1, IP2, IP3, IP4), SEND_PORT);
             status_ = STATUS::RUNNING;
+            // Initialize Joystick inputs and servos
+            input_[0] = 0.0;  // Joystick yaw input
+            input_[1] = 0.0;  // Joystick pitch input
+            input_[2] = 0.0;  // Joystick roll input
         }
 
         ///////////////////
@@ -139,6 +145,7 @@ namespace Cyberwing
                 // receive(); - done through asynchonous function on init()
                 // forwardInputs();
                 forwardInputs2();
+                // updateJoystickInputs();
 
                 // - Send vehicle state to host computer
                 updateState();
@@ -206,21 +213,49 @@ namespace Cyberwing
     }
 
     void Wing::forwardInputs2(void) {
-        // Define joystick input as a 2x1 vector (yaw, pitch)
-        Eigen::Vector2f joystickInput;
-        joystickInput << input_[0], input_[1];
+       // Define joystick input as a 3x1 vector (yaw, pitch, roll)
+        Eigen::Vector3f joystickInput;
+        joystickInput << input_[0], input_[1], input_[2];
 
-        // Define the 4x2 transformation matrix for yaw and pitch mapping
-        Eigen::Matrix<float, 4, 2> A;
-        A <<  1,  1,   // Servo 1
-             -1,  1,   // Servo 2
-              1, -1,   // Servo 3
-             -1, -1;   // Servo 4
+        Serial.println("Roll: ");
+        Serial.println(input_[2]);
+        // Define the 4x3 transformation matrix for yaw, pitch, and roll mapping
+        Eigen::Matrix<float, 4, 3> A;
+        A <<  1,  -1,  -1,   // Servo 1
+             -1,  -1, 1,   // Servo 2
+              1,  1, 1,   // Servo 3
+             -1,  1,  -1;   // Servo 4
 
         // Perform matrix multiplication to get servo commands (4x1 vector)
         Eigen::Vector4f servoCommands = A * joystickInput;
 
-        // Update the servos with calculated commands (you might need to scale or map these to PWM values)
+        Serial.println("Servo Commands before offset: ");
+        Serial.println(servoCommands[0]);
+        Serial.println(servoCommands[1]);
+        Serial.println(servoCommands[2]);
+        Serial.println(servoCommands[3]);
+        // Offset correction based on your resting output values
+        Eigen::Vector4f offset;
+        offset << -0.08, -0.28, 0.28, 0.08; // Correcting offset for each servo
+
+        // Apply offset correction
+        servoCommands = servoCommands - offset;
+        Serial.println("Servo Commands after offset: ");
+        Serial.println(servoCommands[0]);
+        Serial.println(servoCommands[1]);
+        Serial.println(servoCommands[2]);
+        Serial.println(servoCommands[3]);
+        // Map the servo commands to appropriate PWM values (1000–2000 µs typical range)
+        float pwm_min = 1000.0;
+        float pwm_max = 2000.0;
+        float pwm_neutral = 1500.0;  // Neutral position
+
+        for (int i = 0; i < 4; i++) {
+            // Scale the commands to the PWM range
+            servoCommands[i] = pwm_neutral + (servoCommands[i] * (pwm_max - pwm_min) / 2);
+        }
+
+        // Update the servos with calculated commands (scaled to PWM)
         servo1_.writeMicroseconds(servoCommands[0]);  // Send command to Servo 1
         servo2_.writeMicroseconds(servoCommands[1]);  // Send command to Servo 2
         servo3_.writeMicroseconds(servoCommands[2]);  // Send command to Servo 3
@@ -235,6 +270,20 @@ namespace Cyberwing
 
     }
 
+    void Wing::updateJoystickInputs(void) {
+        // Assume input_ is populated elsewhere from the joystick values
+        // Raw joystick inputs (yaw, pitch, roll) are in input_[0], input_[1], input_[2]
+        
+        // Print the raw joystick inputs for inspection
+        Serial.println("Raw Joystick Inputs: ");
+        Serial.print("Yaw (input[0]): ");
+        Serial.println(input_[0]);
+        Serial.print("Pitch (input[1]): ");
+        Serial.println(input_[1]);
+        Serial.print("Roll (input[2]): ");
+        Serial.println(input_[2]);
+    }
+    
     void Wing::updateState(void)
 	{
         // read state
@@ -351,5 +400,25 @@ namespace Cyberwing
         memcpy(packetBuffer_, &outPacket_, sizeof(packetBuffer_));
         udp2_.write(packetBuffer_, sizeof(packetBuffer_));
     }
+
+    void print_mtxf(const Eigen::MatrixXf& X)  
+    {
+        int i, j, nrow, ncol;
+        nrow = X.rows();
+        ncol = X.cols();
+        Serial.print("nrow: "); Serial.println(nrow);
+        Serial.print("ncol: "); Serial.println(ncol);       
+        Serial.println();
+        for (i=0; i<nrow; i++)
+    {
+            for (j=0; j<ncol; j++)
+            {
+                Serial.print(X(i,j), 6);   // print 6 decimal places
+                Serial.print(", ");
+            }
+            Serial.println();
+    }
+    Serial.println();
+}
 
 }
