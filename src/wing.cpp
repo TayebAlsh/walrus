@@ -1,12 +1,7 @@
 #include "wing/wing.h"
 #include "myAHRS_plus.h"
 
-#undef B1
-#include <Eigen/Dense>
-// Redefine the B1 macro
-#define B1 1
-
-
+#include "eigen.h"
 
 namespace Cyberwing
 {
