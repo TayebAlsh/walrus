@@ -222,29 +222,20 @@ namespace Cyberwing
         // Define the 4x3 transformation matrix for yaw, pitch, and roll mapping
         Eigen::Matrix<float, 4, 3> A;
         A <<  1,  -1,  -1,   // Servo 1
-             -1,  -1, 1,   // Servo 2
-              1,  1, 1,   // Servo 3
+             -1,  -1, -1,   // Servo 2
+              1,  1, -1,   // Servo 3
              -1,  1,  -1;   // Servo 4
 
         // Perform matrix multiplication to get servo commands (4x1 vector)
         Eigen::Vector4f servoCommands = A * joystickInput;
 
+       // Debugging output
         Serial.println("Servo Commands before offset: ");
         Serial.println(servoCommands[0]);
         Serial.println(servoCommands[1]);
         Serial.println(servoCommands[2]);
         Serial.println(servoCommands[3]);
-        // Offset correction based on your resting output values
-        Eigen::Vector4f offset;
-        offset << -0.08, -0.28, 0.28, 0.08; // Correcting offset for each servo
 
-        // Apply offset correction
-        servoCommands = servoCommands - offset;
-        Serial.println("Servo Commands after offset: ");
-        Serial.println(servoCommands[0]);
-        Serial.println(servoCommands[1]);
-        Serial.println(servoCommands[2]);
-        Serial.println(servoCommands[3]);
         // Map the servo commands to appropriate PWM values (1000–2000 µs typical range)
         float pwm_min = 1000.0;
         float pwm_max = 2000.0;
