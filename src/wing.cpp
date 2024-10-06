@@ -44,8 +44,7 @@ namespace Cyberwing
             Serial.println(F("Failed to configure Ethernet"));
             if (!Ethernet.linkStatus())
                 Serial.println(F("Ethernet cable is not connected."));
-            while (true)
-                delay(1);
+            // Instead of stopping execution, just set the status and continue
         } else {
             Serial.print(F("Connected! Teensy IP address:"));
             Serial.println(Ethernet.localIP());
@@ -80,6 +79,9 @@ namespace Cyberwing
         // Wire.setSCL(DEPTH_SCL);
         // Wire.setSDA(DEPTH_SDA);
 
+        ///////////////////
+        // Initialize Depth Sensor
+        Serial.println(F("Initializing depth sensor..."));
         if (!depth_.init()) {
             Serial.println("Init failed!");
             Serial.println("Are SDA/SCL connected correctly?");
@@ -208,8 +210,6 @@ namespace Cyberwing
         servo2_.writeMicroseconds(del2_ms);
         servo3_.writeMicroseconds(del3_ms);
         servo4_.writeMicroseconds(del4_ms);
-        Serial.print(F("Servo 1: "));
-        Serial.println(del1_ms);
     }
 
     void Wing::forwardInputs2(void) {
@@ -217,8 +217,6 @@ namespace Cyberwing
         Eigen::Vector3f joystickInput;
         joystickInput << input_[0], input_[1], input_[2];
 
-        Serial.println("Roll: ");
-        Serial.println(input_[2]);
         // Define the 4x3 transformation matrix for yaw, pitch, and roll mapping
         Eigen::Matrix<float, 4, 3> A;
         A <<  1,  -1,  -1,   // Servo 1
@@ -230,11 +228,11 @@ namespace Cyberwing
         Eigen::Vector4f servoCommands = A * joystickInput;
 
        // Debugging output
-        Serial.println("Servo Commands before offset: ");
-        Serial.println(servoCommands[0]);
-        Serial.println(servoCommands[1]);
-        Serial.println(servoCommands[2]);
-        Serial.println(servoCommands[3]);
+        // Serial.println("Servo Commands before offset: ");
+        // Serial.println(servoCommands[0]);
+        // Serial.println(servoCommands[1]);
+        // Serial.println(servoCommands[2]);
+        // Serial.println(servoCommands[3]);
 
         // Map the servo commands to appropriate PWM values (1000–2000 µs typical range)
         float pwm_min = 1000.0;
@@ -253,11 +251,11 @@ namespace Cyberwing
         servo4_.writeMicroseconds(servoCommands[3]);  // Send command to Servo 4
 
         // Debugging output
-        Serial.println("Servo Commands: ");
-        Serial.println(servoCommands[0]);
-        Serial.println(servoCommands[1]);
-        Serial.println(servoCommands[2]);
-        Serial.println(servoCommands[3]);
+        // Serial.println("Servo Commands: ");
+        // Serial.println(servoCommands[0]);
+        // Serial.println(servoCommands[1]);
+        // Serial.println(servoCommands[2]);
+        // Serial.println(servoCommands[3]);
 
     }
 
