@@ -3,20 +3,6 @@
 
 #include <Wire.h>
 
-
-// #define MYAHRS_I2C_ADDRESS           0x20
-// #define MYMOTION_WHO_AM_I_VALUE      0xB1
-
-// int who_am_i();
-// int read_rev_id();
-// bool read(uint8_t reg_add, uint8_t* buff , uint8_t len);
-// bool sensor_init();
-// bool write(uint8_t reg_add, uint8_t* buff , uint8_t len);
-// int read_raw_data();
-// int read_compensated_data();
-// int read_quat();
-// int read_euler();
-
 //myAHRS_plus register map
 
 enum {
@@ -86,9 +72,7 @@ enum {
     I2C_SLAVE_REG_QUATERNIAN_W_HIGH,
 };
 
-
-
-bool read(uint8_t reg_add, uint8_t* buff , uint8_t len)
+bool readSensor(uint8_t reg_add, uint8_t* buff , uint8_t len)
 {
     Wire1.beginTransmission((uint8_t)MYAHRS_I2C_ADDRESS);  
     Wire1.write(reg_add); 
@@ -108,10 +92,10 @@ bool sensor_init()
   uint8_t buf_whomi[1];
   uint8_t buf_stat[1];
     
-  if(read(I2C_SLAVE_REG_WHO_AM_I, buf_whomi, 1) != 0xB1) {
+  if(readSensor(I2C_SLAVE_REG_WHO_AM_I, buf_whomi, 1) != 0xB1) {
     return false;
   }
-  if(read(I2C_SLAVE_REG_STATUS, buf_stat, 1) != 0x80) {
+  if(readSensor(I2C_SLAVE_REG_STATUS, buf_stat, 1) != 0x80) {
     return false;
   }
   return true;
@@ -134,7 +118,7 @@ int read_raw_data()
 {
   uint8_t buf_raw_data[18];
   
-  read(I2C_SLAVE_REG_I_ACC_X_LOW, buf_raw_data, 18);
+  readSensor(I2C_SLAVE_REG_I_ACC_X_LOW, buf_raw_data, 18);
   
   //Little endian
   int16_t acc_x = (buf_raw_data[1]<<8) | buf_raw_data[0];
@@ -156,7 +140,7 @@ int read_raw_data()
 int read_compensated_data()
 {
   uint8_t buf_comp_data[18];
-  read(I2C_SLAVE_REG_C_ACC_X_LOW, buf_comp_data, 18);
+  readSensor(I2C_SLAVE_REG_C_ACC_X_LOW, buf_comp_data, 18);
   
   int16_t acc_c_x = (buf_comp_data[1]<<8) | buf_comp_data[0];
   int16_t acc_c_y = (buf_comp_data[3]<<8) | buf_comp_data[2];
@@ -191,7 +175,7 @@ int read_euler()
 {
   uint8_t buf_euler[6];
   
-  read(I2C_SLAVE_REG_ROLL_LOW, buf_euler, 6);
+  readSensor(I2C_SLAVE_REG_ROLL_LOW, buf_euler, 6);
   
   int16_t euler_x = (buf_euler[1]<<8) | buf_euler[0];
   int16_t euler_y = (buf_euler[3]<<8) | buf_euler[2];
@@ -209,7 +193,7 @@ int read_quat()
 {
   uint8_t buf_quat[8];
   
-  read(I2C_SLAVE_REG_QUATERNIAN_X_LOW, buf_quat, 8);
+  readSensor(I2C_SLAVE_REG_QUATERNIAN_X_LOW, buf_quat, 8);
   
   int16_t quat_x = (buf_quat[1]<<8) | buf_quat[0];
   int16_t quat_y = (buf_quat[3]<<8) | buf_quat[2];
@@ -227,22 +211,21 @@ int read_quat()
 }
 
 
- //READ REVISION ID
+// READ REVISION ID
 int read_rev_id()
 {
   uint8_t id_1 = 0;
   uint8_t id_2 = 0;
-  read(I2C_SLAVE_REG_REV_ID_MAJOR, &id_1, 1);
-  read(I2C_SLAVE_REG_REV_ID_MAJOR, &id_2, 1);
+  readSensor(I2C_SLAVE_REG_REV_ID_MAJOR, &id_1, 1);
+  readSensor(I2C_SLAVE_REG_REV_ID_MAJOR, &id_2, 1);
   Serial.print("READ REVISION ID= "); Serial.print(id_1); Serial.println(id_2);
 }
 
 int who_am_i()
 {
   uint8_t whomi = 0;
-  read(I2C_SLAVE_REG_WHO_AM_I, &whomi, 1);
+  readSensor(I2C_SLAVE_REG_WHO_AM_I, &whomi, 1);
   Serial.print("WHO AM I = "); Serial.println(whomi, HEX);
 }
-
 
 #endif

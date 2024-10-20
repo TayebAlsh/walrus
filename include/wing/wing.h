@@ -43,7 +43,7 @@ namespace Cyberwing
 			float q1, q2, q3, q4;
 			float depth, temperature;
 			float leak;
-			float d1, d2, d3, d4, d5;
+			//float d1, d2, d3, d4, d5;
 		};
 
 	public:
@@ -81,6 +81,8 @@ namespace Cyberwing
 		void parsePacket(AsyncUDPPacket packet);
 		void publishState(void);
 		void forwardInputs(void);
+		void forwardInputs2(void);
+		void updateJoystickInputs(void); // Add this line
 		void updateState(void);
 
 		float my_map(int x, float in_min, float in_max, float out_min, float out_max);

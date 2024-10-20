@@ -2,6 +2,9 @@
 #include "myAHRS_plus.h"
 
 
+#include "eigen.h"      // Calls main Eigen matrix class library
+#include <Eigen/LU>     // Calls inverse, determinant, LU decomp., etc.
+
 namespace Cyberwing
 {
     //Constructor
@@ -41,8 +44,7 @@ namespace Cyberwing
             Serial.println(F("Failed to configure Ethernet"));
             if (!Ethernet.linkStatus())
                 Serial.println(F("Ethernet cable is not connected."));
-            while (true)
-                delay(1);
+            // Instead of stopping execution, just set the status and continue
         } else {
             Serial.print(F("Connected! Teensy IP address:"));
             Serial.println(Ethernet.localIP());
@@ -57,6 +59,10 @@ namespace Cyberwing
             // Connect to IP and Port for sending packets
             udp2_.connect(IPAddress(IP1, IP2, IP3, IP4), SEND_PORT);
             status_ = STATUS::RUNNING;
+            // Initialize Joystick inputs and servos
+            input_[0] = 0.0;  // Joystick yaw input
+            input_[1] = 0.0;  // Joystick pitch input
+            input_[2] = 0.0;  // Joystick roll input
         }
 
         ///////////////////
@@ -73,6 +79,9 @@ namespace Cyberwing
         // Wire.setSCL(DEPTH_SCL);
         // Wire.setSDA(DEPTH_SDA);
 
+        ///////////////////
+        // Initialize Depth Sensor
+        Serial.println(F("Initializing depth sensor..."));
         if (!depth_.init()) {
             Serial.println("Init failed!");
             Serial.println("Are SDA/SCL connected correctly?");
@@ -82,8 +91,8 @@ namespace Cyberwing
             delay(1000);
         } else {
             depth_.setFluidDensity(FLUID_DENSITY);
-            // depth_.setModel(MS5837::MS5837_30BA);
-            depth_.setModel(MS5837::MS5837_02BA);
+            depth_.setModel(MS5837::MS5837_30BA);
+            //depth_.setModel(MS5837::MS5837_02BA);
             Serial.println("Depth Sensor Detected!");
             Serial.print(F("Fluid density set to: "));
             Serial.println(FLUID_DENSITY);
@@ -136,7 +145,9 @@ namespace Cyberwing
 
                 // receive input packet and update 
                 // receive(); - done through asynchonous function on init()
-                forwardInputs();
+                // forwardInputs();
+                forwardInputs2();
+                // updateJoystickInputs();
 
                 // - Send vehicle state to host computer
                 updateState();
@@ -152,13 +163,13 @@ namespace Cyberwing
                 int del2_ms = map(0, -1.57, 1.57, 1000, 2000);
                 int del3_ms = map(0, -1.57, 1.57, 1000, 2000);
                 int del4_ms = map(0, -1.57, 1.57, 1000, 2000);
-                int del5_ms = map(0, -1.57, 1.57, 1000, 2000);
+                //int del5_ms = map(0, -1.57, 1.57, 1000, 2000);
 
                 servo1_.writeMicroseconds(del1_ms);
                 servo2_.writeMicroseconds(del2_ms);
                 servo3_.writeMicroseconds(del3_ms);
                 servo4_.writeMicroseconds(del4_ms);
-                servo5_.writeMicroseconds(del5_ms);
+                //servo5_.writeMicroseconds(del5_ms);
 
 				break;
 			}
@@ -188,27 +199,85 @@ namespace Cyberwing
     void Wing::forwardInputs(void) {
 
         // TODO> THESE GUYS MUST BE TUNNED!
-        int del1_ms = map(input_[0], -1.57, 1.57, 1000, 2000);
-        int del2_ms = map(input_[1], -1.57, 1.57, 1000, 2000);
-        int del3_ms = map(input_[2], -1.57, 1.57, 1000, 2000);
-        int del4_ms = map(input_[3], -1.57, 1.57, 1000, 2000);
-        int del5_ms = map(input_[4], -1.57, 1.57, 1000, 2000);
+        int del1_ms = map(-input_[1], -1.57, 1.57, 1000, 2000);
+        int del2_ms = map(-input_[1], -1.57, 1.57, 1000, 2000);
+        int del3_ms = map(input_[1], -1.57, 1.57, 1000, 2000);
+        int del4_ms = map(input_[1], -1.57, 1.57, 1000, 2000);
+
         
         // Write to the servos
         servo1_.writeMicroseconds(del1_ms);
         servo2_.writeMicroseconds(del2_ms);
         servo3_.writeMicroseconds(del3_ms);
         servo4_.writeMicroseconds(del4_ms);
-        servo5_.writeMicroseconds(del5_ms);
+    }
+
+    void Wing::forwardInputs2(void) {
+       // Define joystick input as a 3x1 vector (yaw, pitch, roll)
+        Eigen::Vector3f joystickInput;
+        joystickInput << input_[0], input_[1], input_[2];
+
+        // Define the 4x3 transformation matrix for yaw, pitch, and roll mapping
+        Eigen::Matrix<float, 4, 3> A;
+        A <<  1,  -1,  -1,   // Servo 1
+             -1,  -1, -1,   // Servo 2
+              1,  1, -1,   // Servo 3
+             -1,  1,  -1;   // Servo 4
+
+        // Perform matrix multiplication to get servo commands (4x1 vector)
+        Eigen::Vector4f servoCommands = A * joystickInput;
+
+       // Debugging output
+        // Serial.println("Servo Commands before offset: ");
+        // Serial.println(servoCommands[0]);
+        // Serial.println(servoCommands[1]);
+        // Serial.println(servoCommands[2]);
+        // Serial.println(servoCommands[3]);
+
+        // Map the servo commands to appropriate PWM values (1000–2000 µs typical range)
+        float pwm_min = 1000.0;
+        float pwm_max = 2000.0;
+        float pwm_neutral = 1500.0;  // Neutral position
+
+        for (int i = 0; i < 4; i++) {
+            // Scale the commands to the PWM range
+            servoCommands[i] = pwm_neutral + (servoCommands[i] * (pwm_max - pwm_min) / 2);
+        }
+
+        // Update the servos with calculated commands (scaled to PWM)
+        servo1_.writeMicroseconds(servoCommands[0]);  // Send command to Servo 1
+        servo2_.writeMicroseconds(servoCommands[1]);  // Send command to Servo 2
+        servo3_.writeMicroseconds(servoCommands[2]);  // Send command to Servo 3
+        servo4_.writeMicroseconds(servoCommands[3]);  // Send command to Servo 4
+
+        // Debugging output
+        // Serial.println("Servo Commands: ");
+        // Serial.println(servoCommands[0]);
+        // Serial.println(servoCommands[1]);
+        // Serial.println(servoCommands[2]);
+        // Serial.println(servoCommands[3]);
 
     }
 
-
+    void Wing::updateJoystickInputs(void) {
+        // Assume input_ is populated elsewhere from the joystick values
+        // Raw joystick inputs (yaw, pitch, roll) are in input_[0], input_[1], input_[2]
+        
+        // Print the raw joystick inputs for inspection
+        Serial.println("Raw Joystick Inputs: ");
+        Serial.print("Yaw (input[0]): ");
+        Serial.println(input_[0]);
+        Serial.print("Pitch (input[1]): ");
+        Serial.println(input_[1]);
+        Serial.print("Roll (input[2]): ");
+        Serial.println(input_[2]);
+    }
+    
     void Wing::updateState(void)
 	{
         // read state
         uint8_t buf_comp_data[18];
-        read(I2C_SLAVE_REG_C_ACC_X_LOW, buf_comp_data, 18);
+        readSensor(I2C_SLAVE_REG_C_ACC_X_LOW, buf_comp_data, 18);
         int16_t acc_c_x = (buf_comp_data[1]<<8) | buf_comp_data[0];
         int16_t acc_c_y = (buf_comp_data[3]<<8) | buf_comp_data[2];
         int16_t acc_c_z = (buf_comp_data[5]<<8) | buf_comp_data[4];
@@ -225,7 +294,7 @@ namespace Cyberwing
 
         // read quaternion
         uint8_t buf_quat[8];
-        read(I2C_SLAVE_REG_QUATERNIAN_X_LOW, buf_quat, 8);
+        readSensor(I2C_SLAVE_REG_QUATERNIAN_X_LOW, buf_quat, 8);
         int16_t quat_x = (buf_quat[1]<<8) | buf_quat[0];
         int16_t quat_y = (buf_quat[3]<<8) | buf_quat[2];
         int16_t quat_z = (buf_quat[5]<<8) | buf_quat[4];
@@ -235,28 +304,6 @@ namespace Cyberwing
         float quaternion_y = (float)quat_y / 32767;
         float quaternion_z = (float)quat_z / 32767;
         float quaternion_w = (float)quat_w / 32767;
-
-
-        // update servo feedback readings,
-        int d1 = analogRead(SERVO1_ANALOG_PIN);
-        int d2 = analogRead(SERVO2_ANALOG_PIN);
-        int d3 = analogRead(SERVO3_ANALOG_PIN);
-        int d4 = analogRead(SERVO4_ANALOG_PIN);
-        int d5 = analogRead(SERVO5_ANALOG_PIN);
-
-        Serial.print("d1 = ");
-        Serial.println(d1);
-
-        // then map the analog input to a radian value.
-        // Todo: MAPPING MUST BE DONE. each servo has different potentiometer.
-        servoFeedback_[0] = my_map(d1, 236, 402, -1.57, 1.57);
-        servoFeedback_[1] = my_map(d2, 236, 402, -1.57, 1.57);
-        servoFeedback_[2] = my_map(d3, 236, 402, -1.57, 1.57);
-        servoFeedback_[3] = my_map(d4, 236, 402, -1.57, 1.57);
-        servoFeedback_[4] = my_map(d5, 236, 402, -1.57, 1.57);
-
-        Serial.print("f1 = ");
-        Serial.println(servoFeedback_[0]);
 
         // New State                
         float stateNew[18];
@@ -273,11 +320,41 @@ namespace Cyberwing
         stateNew[10] = depth_.depth();;
         stateNew[11] = depth_.temperature();
         stateNew[12] = leak_;
-        stateNew[13] = servoFeedback_[0];
-        stateNew[14] = servoFeedback_[1];
-        stateNew[15] = servoFeedback_[2];
-        stateNew[16] = servoFeedback_[3];
-        stateNew[17] = servoFeedback_[4];
+
+        // // Debug prints of dpeth sensor
+        // float rawDepth = depth_.depth();
+        // float rawTemperature = depth_.temperature();
+
+        // // Print raw depth sensor data
+        // Serial.print("Raw Depth: ");
+        // Serial.println(rawDepth);
+
+        // Serial.print("Raw Temperature: ");
+        // Serial.println(rawTemperature);
+
+        // // Existing code to print processed depth sensor data
+        // Serial.print("Depth: ");
+        // Serial.print(stateNew[10]);
+        // Serial.println(" meters");
+
+        // Serial.print("Temperature: ");
+        // Serial.print(stateNew[11]);
+        // Serial.println(" °C");
+
+                // Debug prints for raw IMU data
+        // Serial.print("raw_acc_x: "); Serial.println(acc_c_x);
+        // Serial.print("raw_acc_y: "); Serial.println(acc_c_y);
+        // Serial.print("raw_acc_z: "); Serial.println(acc_c_z);
+        // Serial.print("raw_gyro_x: "); Serial.println(gyro_c_x);
+        // Serial.print("raw_gyro_y: "); Serial.println(gyro_c_y);
+        // Serial.print("raw_gyro_z: "); Serial.println(gyro_c_z);
+
+        //     // Debug prints for raw quaternion data
+        // Serial.print("raw_quat_x: "); Serial.println(quat_x);
+        // Serial.print("raw_quat_y: "); Serial.println(quat_y);
+        // Serial.print("raw_quat_z: "); Serial.println(quat_z);
+        // Serial.print("raw_quat_w: "); Serial.println(quat_w);
+
 
         memcpy(state_,stateNew,sizeof(state_));	
 	}
@@ -303,14 +380,34 @@ namespace Cyberwing
         outPacket_.depth = state_[10];
         outPacket_.temperature = state_[11];
         outPacket_.leak = state_[12];
-        outPacket_.d1 = state_[13];
-        outPacket_.d2 = state_[14];
-        outPacket_.d3 = state_[15];
-        outPacket_.d4 = state_[16];
-        outPacket_.d5 = state_[17];
+        // outPacket_.d1 = state_[13];
+        // outPacket_.d2 = state_[14];
+        // outPacket_.d3 = state_[15];
+        // outPacket_.d4 = state_[16];
+        // outPacket_.d5 = state_[17];
 
         memcpy(packetBuffer_, &outPacket_, sizeof(packetBuffer_));
         udp2_.write(packetBuffer_, sizeof(packetBuffer_));
     }
+
+    void print_mtxf(const Eigen::MatrixXf& X)  
+    {
+        int i, j, nrow, ncol;
+        nrow = X.rows();
+        ncol = X.cols();
+        Serial.print("nrow: "); Serial.println(nrow);
+        Serial.print("ncol: "); Serial.println(ncol);       
+        Serial.println();
+        for (i=0; i<nrow; i++)
+    {
+            for (j=0; j<ncol; j++)
+            {
+                Serial.print(X(i,j), 6);   // print 6 decimal places
+                Serial.print(", ");
+            }
+            Serial.println();
+    }
+    Serial.println();
+}
 
 }
