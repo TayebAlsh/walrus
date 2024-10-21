@@ -5,7 +5,8 @@
 #include "../config.h"
 #include "AsyncUDP_Teensy41.hpp"    
 #include "QNEthernet.h"   
-
+#include "ping1d.h"
+#include "SoftwareSerial.h"
 #include "Servo.h"
 
 #include "SPI.h"
@@ -53,6 +54,7 @@ namespace Cyberwing
 
 	protected:
 		STATUS status_;
+		Ping1D ping;
 
 		// IPAddress remoteIP_; 
 		AsyncUDP udp1_;
@@ -84,9 +86,9 @@ namespace Cyberwing
 		void forwardInputs2(void);
 		void updateJoystickInputs(void); // Add this line
 		void updateState(void);
+		void updatePingData();  // Fetch data from Ping1D sensor
 
 		float my_map(int x, float in_min, float in_max, float out_min, float out_max);
-
 	};
 }
 

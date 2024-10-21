@@ -1,9 +1,14 @@
 #include "wing/wing.h"
 #include "myAHRS_plus.h"
+#include "ping1d.h"  // Include the Ping1D library
 
 
 #include "eigen.h"      // Calls main Eigen matrix class library
 #include <Eigen/LU>     // Calls inverse, determinant, LU decomp., etc.
+
+
+Ping1D ping(Serial1);
+const uint8_t ledPin = 13;  // Built-in LED to indicate the status
 
 namespace Cyberwing
 {
@@ -27,7 +32,9 @@ namespace Cyberwing
         outPacket_(),
         state_{0.0F},
         input_{0.0F}, 
-        packetBuffer_{PACKET_SIZE_OUT}
+        packetBuffer_{PACKET_SIZE_OUT},
+        ping(Serial1)
+        
 	{}
     
 
@@ -120,6 +127,25 @@ namespace Cyberwing
         // Leak Sensor
         pinMode(LEAK_PIN, INPUT);
 
+
+        Serial1.begin(9600);
+
+    // Set LED pin as output
+        pinMode(ledPin, OUTPUT);
+
+        Serial.println("Blue Robotics ping1d-simple on Teensy with Serial1");
+
+    // Initialize the Ping1D sensor and retry if it fails
+        while (!ping.initialize()) {
+            Serial.println("Ping device failed to initialize!");
+            Serial.println("Are the Ping RX/TX pins wired correctly?");
+            Serial.println("Green wire (Ping RX) → TX1 (Teensy, Pin 1)");
+            Serial.println("White wire (Ping TX) → RX1 (Teensy, Pin 0)");
+            delay(2000);  // Wait 2 seconds before trying again
+        }
+        updatePingData();
+
+
         //ready
 		return;
 	}
@@ -152,6 +178,7 @@ namespace Cyberwing
                 // - Send vehicle state to host computer
                 updateState();
                 publishState();
+                updatePingData();
 
                 break;
             }
@@ -211,6 +238,21 @@ namespace Cyberwing
         servo3_.writeMicroseconds(del3_ms);
         servo4_.writeMicroseconds(del4_ms);
     }
+
+    void Wing::updatePingData() {
+    // Check if new data is available from the Ping1D sensor
+    if (ping.update()) {
+        Serial.print("Distance: ");
+        Serial.print(ping.distance());
+        Serial.print(" mm\tConfidence: ");
+        Serial.println(ping.confidence());
+    } else {
+        Serial.println("No update received!");
+    }
+
+    // Toggle the LED to indicate the program is running
+    digitalWrite(ledPin, !digitalRead(ledPin));
+}
 
     void Wing::forwardInputs2(void) {
        // Define joystick input as a 3x1 vector (yaw, pitch, roll)

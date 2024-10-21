@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "check",
+			"path": "../../Documents/PlatformIO/Projects/check"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"streambuf": "cpp",
+			"dense": "cpp"
+		}
+	}
+}
