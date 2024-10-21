@@ -1,14 +1,21 @@
 #include "wing/wing.h"
 #include "myAHRS_plus.h"
 #include "ping1d.h"  // Include the Ping1D library
-
+#include <QNEthernet.h>  
 
 #include "eigen.h"      // Calls main Eigen matrix class library
 #include <Eigen/LU>     // Calls inverse, determinant, LU decomp., etc.
 
 
 Ping1D ping(Serial1);
+
 const uint8_t ledPin = 13;  // Built-in LED to indicate the status
+// MAC address (unique for your Teensy)
+uint8_t mac[6] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED }; 
+
+// Static IP address configuration
+IPAddress ip(192, 168, 2, 3);      // Static IP for the Teensy
+IPAddress subnet(255, 255, 255, 0); // Subnet mask 
 
 namespace Cyberwing
 {
@@ -45,7 +52,7 @@ namespace Cyberwing
 
         ///////////////////////////////////
         // Initialize Ethernet (using DHCP)
-        Ethernet.begin();
+        Ethernet.begin(mac, ip, subnet);
         if (!Ethernet.waitForLocalIP(5000)) {
             status_ = STATUS::FAILURE;
             Serial.println(F("Failed to configure Ethernet"));
