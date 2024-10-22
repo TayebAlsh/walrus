@@ -45,6 +45,7 @@ namespace Cyberwing
 			float depth, temperature;
 			float leak;
 			//float d1, d2, d3, d4, d5;
+			float ping_distance;
 		};
 
 	public:

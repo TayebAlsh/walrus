@@ -2,14 +2,11 @@
 #include "myAHRS_plus.h"
 #include "ping1d.h"  // Include the Ping1D library
 #include <QNEthernet.h>  
-
 #include "eigen.h"      // Calls main Eigen matrix class library
 #include <Eigen/LU>     // Calls inverse, determinant, LU decomp., etc.
 
 
 Ping1D ping(Serial1);
-
-const uint8_t ledPin = 13;  // Built-in LED to indicate the status
 // MAC address (unique for your Teensy)
 uint8_t mac[6] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED }; 
 
@@ -137,21 +134,16 @@ namespace Cyberwing
 
         Serial1.begin(9600);
 
-    // Set LED pin as output
-        pinMode(ledPin, OUTPUT);
-
-        Serial.println("Blue Robotics ping1d-simple on Teensy with Serial1");
-
     // Initialize the Ping1D sensor and retry if it fails
-        while (!ping.initialize()) {
+        if (!ping.initialize()) {
             Serial.println("Ping device failed to initialize!");
             Serial.println("Are the Ping RX/TX pins wired correctly?");
             Serial.println("Green wire (Ping RX) → TX1 (Teensy, Pin 1)");
-            Serial.println("White wire (Ping TX) → RX1 (Teensy, Pin 0)");
-            delay(2000);  // Wait 2 seconds before trying again
+            Serial.println("White wire (Ping TX) → RX1 (Teensy, Pin 0)");    
         }
-        updatePingData();
-
+        else {
+            Serial.println("Ping device initialized");
+        }    
 
         //ready
 		return;
@@ -184,9 +176,8 @@ namespace Cyberwing
 
                 // - Send vehicle state to host computer
                 updateState();
-                publishState();
                 updatePingData();
-
+                publishState();
                 break;
             }
 
@@ -204,6 +195,8 @@ namespace Cyberwing
                 servo3_.writeMicroseconds(del3_ms);
                 servo4_.writeMicroseconds(del4_ms);
                 //servo5_.writeMicroseconds(del5_ms);
+
+                Serial.println("failure");
 
 				break;
 			}
@@ -249,16 +242,13 @@ namespace Cyberwing
     void Wing::updatePingData() {
     // Check if new data is available from the Ping1D sensor
     if (ping.update()) {
-        Serial.print("Distance: ");
-        Serial.print(ping.distance());
-        Serial.print(" mm\tConfidence: ");
-        Serial.println(ping.confidence());
+
+        state_[13] = static_cast<float>(ping.distance());
     } else {
         Serial.println("No update received!");
+        state_[13] = 0;
     }
 
-    // Toggle the LED to indicate the program is running
-    digitalWrite(ledPin, !digitalRead(ledPin));
 }
 
     void Wing::forwardInputs2(void) {
@@ -434,6 +424,7 @@ namespace Cyberwing
         // outPacket_.d3 = state_[15];
         // outPacket_.d4 = state_[16];
         // outPacket_.d5 = state_[17];
+        outPacket_.ping_distance = state_[13];
 
         memcpy(packetBuffer_, &outPacket_, sizeof(packetBuffer_));
         udp2_.write(packetBuffer_, sizeof(packetBuffer_));

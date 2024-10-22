@@ -39,7 +39,7 @@ union num16_t
 #define USING_DHCP true
 #define RECEIVE_PORT 1560
 #define SEND_PORT 1561
-#define PACKET_SIZE_OUT 52
+#define PACKET_SIZE_OUT 56
 // IP ADDRESS OF THE SURFACE COMPUTER
 #define IP1 192
 #define IP2 168
